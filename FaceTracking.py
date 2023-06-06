@@ -2,7 +2,11 @@ import cv2
 import numpy as np
 from djitellopy import tello
 import time
-import simple_pid import PID
+from simple_pid import PID
+import torch
+import torch.nn as nn
+from torchvision import transforms
+from PIL import Image
 
 me = tello.Tello()
 me.connect()
@@ -21,23 +25,36 @@ w, h = 360, 240
 #w, h = 720, 480
 # range to keep from person where [lower bound area, upper bound area]
 # area because the bounding boxes are in rectangles
-goalRange = [8000, 9800]
+goalRange = [2500, 6000]
 
 # pid = [proportional, integral, derivative]
 pid = [0.4, 0, 0.4]
 x_pid = PID(0.7, 0.0001, 0.1, setpoint=1, output_limits=(-40, 40))
 y_pid = PID(0.7, 0.0001, 0.1, setpoint=1, output_limits=(-40, 40))
 
-
-
 # previous error
 prev_xError = 0
 prev_yError = 0
 
+# load pre-trained YOLOv5-face model
+weights_file = "weights\yolov5n-0.5.pt"
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model = torch.load(weights_file, map_location=device)['model'].float()
+model.to(device).eval()
+
 def findFace(img):
-    faceCascade = cv2.CascadeClassifier("Resources/haarcascade_frontalface_default.xml")
-    imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    faces = faceCascade.detectMultiScale(imgGray, 1.03, 4)
+    # faceCascade = cv2.CascadeClassifier("Resources/haarcascade_frontalface_default.xml")
+    # imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # faces = faceCascade.detectMultiScale(imgGray, 1.03, 4)
+
+    # Convert image to tensor
+    img = Image.open(img)
+    convert_tensor = transforms.ToTensor()
+    img_tensor = convert_tensor(img)
+
+    with torch.no_grad():
+        output = model(img)
+    print("output: ", output)
 
     myFaceListC = []
     myFaceListArea = []
@@ -77,14 +94,14 @@ def trackFace(info):
     yError = y - (h // 2)
     # Also keeps image centered.
     # yaw velocity - rotation around the y-axis
-    # speed = pid[0] * xError + pid[2] * (xError - prev_xError)
-    speed = x_pid(xError)
+    speed = pid[0] * xError + pid[2] * (xError - prev_xError)
+    # speed = int(x_pid(xError))
     # clip to ensure speed isn't too high or low (avoid extremes)
-    # speed = int(np.clip(speed, -100, 100))
+    speed = int(np.clip(speed, -100, 100))
 
     # upDown = pid[0] * yError + pid[2] * (yError - prev_yError)
     # upDown = int(np.clip(upDown, -100, 100))
-    upDown = y_pid(yError)
+    upDown = int(y_pid(yError))
 
     if area > goalRange[0] and area < goalRange[1]:
         forwardBackward = 0
@@ -103,7 +120,7 @@ def trackFace(info):
 
     print(xError, forwardBackward, upDown, speed)
 
-    me.send_rc_control(0, forwardBackward, upDown // 3, speed // 2)
+    me.send_rc_control(0, forwardBackward, upDown // 2, speed)
 
     return xError, yError
 
@@ -118,4 +135,3 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord('q'):
         me.land()
         break
-
