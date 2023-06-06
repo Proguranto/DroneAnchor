@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from djitellopy import tello
 import time
+import simple_pid import PID
 
 me = tello.Tello()
 me.connect()
@@ -24,6 +25,10 @@ goalRange = [8000, 9800]
 
 # pid = [proportional, integral, derivative]
 pid = [0.4, 0, 0.4]
+x_pid = PID(0.7, 0.0001, 0.1, setpoint=1, output_limits=(-40, 40))
+y_pid = PID(0.7, 0.0001, 0.1, setpoint=1, output_limits=(-40, 40))
+
+
 
 # previous error
 prev_xError = 0
@@ -72,12 +77,14 @@ def trackFace(info):
     yError = y - (h // 2)
     # Also keeps image centered.
     # yaw velocity - rotation around the y-axis
-    speed = pid[0] * xError + pid[2] * (xError - prev_xError)
+    # speed = pid[0] * xError + pid[2] * (xError - prev_xError)
+    speed = x_pid(xError)
     # clip to ensure speed isn't too high or low (avoid extremes)
-    speed = int(np.clip(speed, -100, 100))
+    # speed = int(np.clip(speed, -100, 100))
 
-    upDown = pid[0] * yError + pid[2] * (yError - prev_yError)
-    upDown = int(np.clip(upDown, -100, 100))
+    # upDown = pid[0] * yError + pid[2] * (yError - prev_yError)
+    # upDown = int(np.clip(upDown, -100, 100))
+    upDown = y_pid(yError)
 
     if area > goalRange[0] and area < goalRange[1]:
         forwardBackward = 0
@@ -86,6 +93,7 @@ def trackFace(info):
     elif area < goalRange[0] and area != 0:
         forwardBackward = 30
 
+    # no face detected
     if x == 0 and y == 0:
         speed = 0
         upDown = 0
@@ -95,7 +103,7 @@ def trackFace(info):
 
     print(xError, forwardBackward, upDown, speed)
 
-    me.send_rc_control(0, forwardBackward, upDown, speed)
+    me.send_rc_control(0, forwardBackward, upDown // 3, speed // 2)
 
     return xError, yError
 
