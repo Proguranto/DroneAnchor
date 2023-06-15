@@ -11,12 +11,12 @@ Inspired by the camera man running in track events, we thought it would be cool 
  <img src="https://media.tenor.com/yhMhGozOVk4AAAAM/world-photography-day-funny-photographer.gif" width="200">
 
 ## Demos
-Here is a demo of the application from the drone's perspective:
-<img src="./demo/drone_view_follow.gif" width="400">
+Here is a demo of the application from the drone's perspective:  
+<img src="./demo/drone_view_follow.gif" width="400">  
 
-Here is a demo of the application from the a third person's perspective:
-<img src="./demo/drone_follow.gif" width="300" height="500">  
+Here is a demo of the application from the a third person's perspective:  
+<img src="./demo/drone_follow.gif" width="300" height="500">   
 
 ## Credits
-The YOLOv5 model: <a href="https://github.com/ultralytics/yolov5">https://github.com/ultralytics/yolov5</a>
+The YOLOv5 model: <a href="https://github.com/ultralytics/yolov5">https://github.com/ultralytics/yolov5</a>  
 The simple-pid module: <a href="https://pypi.org/project/simple-pid/">https://pypi.org/project/simple-pid/</a>
